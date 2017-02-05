@@ -39,7 +39,7 @@ FLAG(string,
 * --windows_additional_event_channels flag.
 */
 const std::set<std::wstring> kDefaultSubscriptionChannels = {
-    L"System", L"Application", L"Setup", L"Security",
+    L"System", L"Application", L"Setup",
 };
 
 class WindowsEventSubscriber
