@@ -53,7 +53,10 @@ OSQUERY_LOG_DIR="/private/var/log/osquery/"
 OSQUERY_TLS_CERT_CHAIN_BUILTIN_SRC="/usr/local/osquery/etc/openssl/cert.pem"
 OSQUERY_TLS_CERT_CHAIN_BUILTIN_DST="/usr/share/osquery/certs/certs.pem"
 TLS_CERT_CHAIN_DST="/private/var/osquery/tls-server-certs.pem"
-FLAGFILE_DST="/private/var/osquery/osquery.flags"
+OSQUERY_FLAGFILE_SRC=""
+OSQUERY_FLAGFILE_DST="/private/var/osquery/osquery.flags"
+OSQUERY_ENROLLMENTSECRET_SRC=""
+OSQUERY_ENROLLMENTSECRET_DST="/private/var/osquery/enroll"
 
 WORKING_DIR=/tmp/osquery_packaging
 INSTALL_PREFIX="$WORKING_DIR/prefix"
@@ -88,7 +91,6 @@ fi
 
 POSTINSTALL_AUTOSTART_TEXT="
 cp $LAUNCHD_DST $LD_INSTALL
-touch $FLAGFILE_DST
 launchctl load $LD_INSTALL
 "
 
@@ -107,6 +109,8 @@ rm -rf $OSQUERY_DB_LOCATION
 function usage() {
   fatal "Usage: $0 [-c path/to/your/osquery.conf] [-l path/to/osqueryd.plist]
     -c PATH embed an osqueryd config.
+    -e PATH to enrollment secret file.
+    -f PATH to flagfile.
     -l PATH override the default launchd plist.
     -t PATH to embed a certificate chain file for TLS server validation
     -o PATH override the output path.
@@ -127,25 +131,31 @@ function usage() {
 function parse_args() {
   while [ "$1" != "" ]; do
     case $1 in
-      -c | --config )         shift
-                              OSQUERY_CONFIG_SRC=$1
-                              ;;
-      -l | --launchd )        shift
-                              LAUNCHD_SRC=$1
-                              ;;
-      -t | --cert-chain )     shift
-                              TLS_CERT_CHAIN_SRC=$1
-                              ;;
-      -o | --output )         shift
-                              OUTPUT_PKG_PATH=$1
-                              ;;
-      -a | --autostart )      AUTOSTART=true
-                              ;;
-      -x | --clean )          CLEAN=true
-                              ;;
-      -h | --help )           usage
-                              ;;
-      * )                     usage
+      -c | --config )               shift
+                                    OSQUERY_CONFIG_SRC=$1
+                                    ;;
+      -f | --flagfile )             shift
+                                    OSQUERY_FLAGFILE_SRC=$1
+                                    ;;
+      -e | --enrollment-secret )    shift
+                                    OSQUERY_ENROLLMENTSECRET_SRC=$1
+                                    ;;
+      -l | --launchd )              shift
+                                    LAUNCHD_SRC=$1
+                                    ;;
+      -t | --cert-chain )           shift
+                                    TLS_CERT_CHAIN_SRC=$1
+                                    ;;
+      -o | --output )               shift
+                                    OUTPUT_PKG_PATH=$1
+                                    ;;
+      -a | --autostart )            AUTOSTART=true
+                                    ;;
+      -x | --clean )                CLEAN=true
+                                    ;;
+      -h | --help )                 usage
+                                    ;;
+      * )                           usage
     esac
     shift
   done
@@ -196,6 +206,18 @@ function main() {
   mkdir -p `dirname $INSTALL_PREFIX$OSQUERY_CONFIG_DST`
   if [[ "$OSQUERY_CONFIG_SRC" != "" ]]; then
     cp $OSQUERY_CONFIG_SRC $INSTALL_PREFIX$OSQUERY_CONFIG_DST
+  fi
+  # Copy or create empty flag file.
+  if [[ "$OSQUERY_FLAGFILE_SRC" != "" ]]; then
+    cp $OSQUERY_FLAGFILE_SRC $INSTALL_PREFIX$OSQUERY_FLAGFILE_DST
+    log "using $OSQUERY_FLAGFILE_SRC"
+  else
+    touch $INSTALL_PREFIX$OSQUERY_FLAGFILE_DST
+  fi
+  # Create enrollment secret file.
+  if [[ "$OSQUERY_ENROLLMENTSECRET_SRC" != "" ]]; then
+    cp $OSQUERY_ENROLLMENTSECRET_SRC $INSTALL_PREFIX$OSQUERY_ENROLLMENTSECRET_DST
+    log "using $OSQUERY_ENROLLMENTSECRET_SRC"
   fi
 
   # Move configurations into the packaging root.
